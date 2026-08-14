@@ -1,0 +1,1 @@
+do shell script "__SHARED_SCRIPT_PATH__ '__VAULT_DIR__' '__BACKUPS_DIR__' '__DEFAULT_BRANCH__' '__MAX_BUNDLES__' '__LOG_PATH__' '__NOTIFY_SUCCESS__' 'true' 'scheduled'; exit 0"
