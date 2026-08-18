@@ -11,7 +11,7 @@ CONFIG_DIR="$HOME/.config/vault-backup"
 usage() {
     cat >&2 << USAGE
 Usage:
-  $0 setup <vault-dir>            interactive setup for a vault
+  $0 setup                        interactive setup for a vault
   $0 backup <vault-dir>           run a backup now
   $0 schedule on|off <vault-dir>  enable/disable the daily automatic backup
   $0 notify on|off <vault-dir>    enable/disable success notifications for scheduled runs
@@ -73,17 +73,15 @@ plist_path() {
 }
 
 cmd_setup() {
-    local vault_dir="${1:-}"
-    
+    local vault_dir=""
+
     if [ ! -f "$SHARED_SCRIPT_SRC" ]; then
         echo "Error: shared script not found at '$SHARED_SCRIPT_SRC'." >&2
         exit 1
     fi
-    
-    if [ -z "$vault_dir" ]; then
-        read -rp "Vault directory path: " vault_dir
-    fi
-    
+
+    read -rp "Vault directory path: " vault_dir
+
     while true; do
         vault_dir="${vault_dir%/}"
         if [ -z "$vault_dir" ]; then
@@ -355,7 +353,7 @@ cmd_info() {
 [ $# -lt 1 ] && usage
 
 case "$1" in
-    setup) shift; cmd_setup "$@" ;;
+    setup) cmd_setup ;;
     backup) shift; cmd_backup "$@" ;;
     schedule) shift; cmd_schedule "$@" ;;
     notify) shift; cmd_notify "$@" ;;
