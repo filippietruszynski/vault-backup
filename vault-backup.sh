@@ -16,6 +16,7 @@ Usage:
   $0 schedule on|off <vault-name> enable/disable the daily automatic backup
   $0 notify on|off <vault-name>   enable/disable success notifications for scheduled runs
   $0 info <vault-name>            print the configuration and file locations for a vault
+  $0 logs <vault-name>            print a vault's log file
 USAGE
     exit 1
 }
@@ -368,6 +369,21 @@ cmd_info() {
     echo "Shared script:     $SHARED_SCRIPT_PATH"
 }
 
+cmd_logs() {
+    local vault_name="${1:-}"
+    [ -z "$vault_name" ] && usage
+    load_config "$vault_name"
+
+    local log_file
+    log_file="$(log_path "$vault_name")"
+    if [ ! -f "$log_file" ]; then
+        echo "Error: no log file for '$vault_name' yet at '$log_file'." >&2
+        exit 1
+    fi
+
+    cat "$log_file"
+}
+
 [ $# -lt 1 ] && usage
 
 case "$1" in
@@ -376,5 +392,6 @@ case "$1" in
     schedule) shift; cmd_schedule "$@" ;;
     notify) shift; cmd_notify "$@" ;;
     info) shift; cmd_info "$@" ;;
+    logs) shift; cmd_logs "$@" ;;
     *) usage ;;
 esac
