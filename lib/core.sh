@@ -20,6 +20,7 @@ VAULT_NAME="$(basename "$VAULT_DIR")"
 case "$RUN_TYPE" in
     manual) RUN_TYPE_LABEL="M" ;;
     scheduled) RUN_TYPE_LABEL="S" ;;
+    *) RUN_TYPE_LABEL="?" ;;
 esac
 
 log() {
