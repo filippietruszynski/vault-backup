@@ -150,22 +150,9 @@ cmd_setup() {
         break
     done
     
-    while true; do
-        read -rp "Notify on successful scheduled backups too? (only applies once you enable the schedule) [Y/n]: " notify_success_answer
-        notify_success_answer="${notify_success_answer:-y}"
-        if [[ "$notify_success_answer" =~ ^[Yy]$ ]]; then
-            NOTIFY_SUCCESS="true"
-            break
-            elif [[ "$notify_success_answer" =~ ^[Nn]$ ]]; then
-            NOTIFY_SUCCESS="false"
-            break
-        fi
-        echo "  Please answer y or n."
-    done
-    
-    # preserve an existing schedule if this vault was already set up before
     local existing_config
     existing_config="$(config_path "$VAULT_DIR")"
+    NOTIFY_SUCCESS="false"
     SCHEDULE_ENABLED="false"
     BACKUP_HOUR="17"
     BACKUP_MINUTE="00"
@@ -188,7 +175,6 @@ cmd_setup() {
     echo "  Backups dir:    $BACKUPS_DIR"
     echo "  Default branch: $DEFAULT_BRANCH"
     echo "  Max backups:    $MAX_BUNDLES"
-    echo "  Notify success: $NOTIFY_SUCCESS"
     echo ""
     echo "Run a backup now:      $0 backup '$VAULT_DIR'"
     echo "Enable daily schedule: $0 schedule on '$VAULT_DIR'"
