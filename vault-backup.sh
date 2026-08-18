@@ -12,10 +12,10 @@ usage() {
     cat >&2 << USAGE
 Usage:
   $0 setup                        interactive setup for a vault
-  $0 backup <vault-dir>           run a backup now
-  $0 schedule on|off <vault-dir>  enable/disable the daily automatic backup
-  $0 notify on|off <vault-dir>    enable/disable success notifications for scheduled runs
-  $0 info <vault-dir>             print the configuration and file locations for a vault
+  $0 backup <vault-name>          run a backup now
+  $0 schedule on|off <vault-name> enable/disable the daily automatic backup
+  $0 notify on|off <vault-name>   enable/disable success notifications for scheduled runs
+  $0 info <vault-name>            print the configuration and file locations for a vault
 USAGE
     exit 1
 }
@@ -25,15 +25,31 @@ vault_name() {
 }
 
 config_path() {
-    echo "$CONFIG_DIR/$(vault_name "$1").conf"
+    echo "$CONFIG_DIR/$1.conf"
+}
+
+list_vault_names() {
+    local config_file name
+    for config_file in "$CONFIG_DIR"/*.conf; do
+        [ -f "$config_file" ] || continue
+        name="$(basename "$config_file" .conf)"
+        echo "$name"
+    done
 }
 
 load_config() {
-    local vault_dir="$1"
+    local vault_name="$1"
     local config_file
-    config_file="$(config_path "$vault_dir")"
+    config_file="$(config_path "$vault_name")"
     if [ ! -f "$config_file" ]; then
-        echo "Error: no config found for '$vault_dir'. Run '$0 setup $vault_dir' first." >&2
+        local available
+        available="$(list_vault_names)"
+        if [ -z "$available" ]; then
+            echo "Error: no vault named '$vault_name'. No vaults configured yet — run '$0 setup' first." >&2
+        else
+            echo "Error: no vault named '$vault_name'. Available vaults:" >&2
+            echo "$available" | sed 's/^/  /' >&2
+        fi
         exit 1
     fi
     # shellcheck source=/dev/null
@@ -41,8 +57,9 @@ load_config() {
 }
 
 write_config() {
-    local config_file
-    config_file="$(config_path "$VAULT_DIR")"
+    local config_file vault_name
+    vault_name="$(vault_name "$VAULT_DIR")"
+    config_file="$(config_path "$vault_name")"
     mkdir -p "$CONFIG_DIR"
     cat > "$config_file" << CONFIG_EOF
 VAULT_DIR="$VAULT_DIR"
@@ -57,15 +74,15 @@ CONFIG_EOF
 }
 
 log_path() {
-    echo "$HOME/Library/Logs/VaultBackup/$(vault_name "$1").log"
+    echo "$HOME/Library/Logs/VaultBackup/$1.log"
 }
 
 app_path() {
-    echo "$HOME/Applications/VaultBackup/$(vault_name "$1").app"
+    echo "$HOME/Applications/VaultBackup/$1.app"
 }
 
 plist_label() {
-    echo "com.$(whoami).vault-backup-$(vault_name "$1")"
+    echo "com.$(whoami).vault-backup-$1"
 }
 
 plist_path() {
@@ -150,7 +167,7 @@ cmd_setup() {
     done
     
     local existing_config
-    existing_config="$(config_path "$VAULT_DIR")"
+    existing_config="$(config_path "$vault_name")"
     NOTIFY_SUCCESS="false"
     SCHEDULE_ENABLED="false"
     BACKUP_HOUR="17"
@@ -175,17 +192,17 @@ cmd_setup() {
     echo "  Default branch: $DEFAULT_BRANCH"
     echo "  Max backups:    $MAX_BUNDLES"
     echo ""
-    echo "Run a backup now:      $0 backup '$VAULT_DIR'"
-    echo "Enable daily schedule: $0 schedule on '$VAULT_DIR'"
+    echo "Run a backup now:      $0 backup $vault_name"
+    echo "Enable daily schedule: $0 schedule on $vault_name"
 }
 
 cmd_backup() {
-    local vault_dir="${1:-}"
-    [ -z "$vault_dir" ] && usage
-    load_config "$vault_dir"
+    local vault_name="${1:-}"
+    [ -z "$vault_name" ] && usage
+    load_config "$vault_name"
     
     local log_file
-    log_file="$(log_path "$VAULT_DIR")"
+    log_file="$(log_path "$vault_name")"
     mkdir -p "$(dirname "$log_file")"
     
     echo "Backing up '$VAULT_DIR' to '$BACKUPS_DIR' ..."
@@ -197,19 +214,19 @@ cmd_backup() {
 
 cmd_schedule() {
     local action="${1:-}"
-    local vault_dir="${2:-}"
-    [ -z "$action" ] || [ -z "$vault_dir" ] && usage
-    
+    local vault_name="${2:-}"
+    [ -z "$action" ] || [ -z "$vault_name" ] && usage
+
     case "$action" in
-        on) cmd_schedule_on "$vault_dir" ;;
-        off) cmd_schedule_off "$vault_dir" ;;
+        on) cmd_schedule_on "$vault_name" ;;
+        off) cmd_schedule_off "$vault_name" ;;
         *) usage ;;
     esac
 }
 
 cmd_schedule_on() {
-    local vault_dir="$1"
-    load_config "$vault_dir"
+    local vault_name="$1"
+    load_config "$vault_name"
     
     if [ ! -f "$PLIST_TEMPLATE_SRC" ]; then
         echo "Error: plist template not found at '$PLIST_TEMPLATE_SRC'." >&2
@@ -233,10 +250,10 @@ cmd_schedule_on() {
     BACKUP_MINUTE="${BACKUP_MINUTE:-00}"
     
     local app_path plist_label plist_path log_file
-    app_path="$(app_path "$VAULT_DIR")"
-    plist_label="$(plist_label "$VAULT_DIR")"
-    plist_path="$(plist_path "$VAULT_DIR")"
-    log_file="$(log_path "$VAULT_DIR")"
+    app_path="$(app_path "$vault_name")"
+    plist_label="$(plist_label "$vault_name")"
+    plist_path="$(plist_path "$vault_name")"
+    log_file="$(log_path "$vault_name")"
     
     local app_created=0
     local plist_created=0
@@ -294,13 +311,13 @@ cmd_schedule_on() {
 }
 
 cmd_schedule_off() {
-    local vault_dir="$1"
-    load_config "$vault_dir"
+    local vault_name="$1"
+    load_config "$vault_name"
     
     local plist_label plist_path app_path
-    plist_label="$(plist_label "$VAULT_DIR")"
-    plist_path="$(plist_path "$VAULT_DIR")"
-    app_path="$(app_path "$VAULT_DIR")"
+    plist_label="$(plist_label "$vault_name")"
+    plist_path="$(plist_path "$vault_name")"
+    app_path="$(app_path "$vault_name")"
     
     echo "Disabling schedule for '$VAULT_DIR' ..."
     launchctl bootout "gui/$(id -u)/$plist_label" > /dev/null 2>&1 || true
@@ -315,10 +332,10 @@ cmd_schedule_off() {
 
 cmd_notify() {
     local action="${1:-}"
-    local vault_dir="${2:-}"
-    [ -z "$action" ] || [ -z "$vault_dir" ] && usage
-    
-    load_config "$vault_dir"
+    local vault_name="${2:-}"
+    [ -z "$action" ] || [ -z "$vault_name" ] && usage
+
+    load_config "$vault_name"
     
     case "$action" in
         on) NOTIFY_SUCCESS="true" ;;
@@ -331,9 +348,9 @@ cmd_notify() {
 }
 
 cmd_info() {
-    local vault_dir="${1:-}"
-    [ -z "$vault_dir" ] && usage
-    load_config "$vault_dir"
+    local vault_name="${1:-}"
+    [ -z "$vault_name" ] && usage
+    load_config "$vault_name"
 
     echo "Vault:             $VAULT_DIR"
     echo "Backups dir:       $BACKUPS_DIR"
@@ -343,11 +360,11 @@ cmd_info() {
     echo "Schedule enabled:  $SCHEDULE_ENABLED"
     echo "Backup time:       $BACKUP_HOUR:$BACKUP_MINUTE"
     echo ""
-    echo "Config file:       $(config_path "$VAULT_DIR")"
-    echo "Log file:          $(log_path "$VAULT_DIR")"
-    echo "App bundle:        $(app_path "$VAULT_DIR")"
-    echo "LaunchAgent label: $(plist_label "$VAULT_DIR")"
-    echo "LaunchAgent plist: $(plist_path "$VAULT_DIR")"
+    echo "Config file:       $(config_path "$vault_name")"
+    echo "Log file:          $(log_path "$vault_name")"
+    echo "App bundle:        $(app_path "$vault_name")"
+    echo "LaunchAgent label: $(plist_label "$vault_name")"
+    echo "LaunchAgent plist: $(plist_path "$vault_name")"
 }
 
 [ $# -lt 1 ] && usage
