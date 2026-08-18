@@ -91,14 +91,14 @@ plist_path() {
 
 cmd_setup() {
     local vault_dir=""
-
+    
     if [ ! -f "$SHARED_SCRIPT_SRC" ]; then
         echo "Error: shared script not found at '$SHARED_SCRIPT_SRC'." >&2
         exit 1
     fi
-
+    
     read -rp "Vault directory path: " vault_dir
-
+    
     while true; do
         vault_dir="${vault_dir%/}"
         if [ -z "$vault_dir" ]; then
@@ -216,7 +216,7 @@ cmd_schedule() {
     local action="${1:-}"
     local vault_name="${2:-}"
     [ -z "$action" ] || [ -z "$vault_name" ] && usage
-
+    
     case "$action" in
         on) cmd_schedule_on "$vault_name" ;;
         off) cmd_schedule_off "$vault_name" ;;
@@ -334,7 +334,7 @@ cmd_notify() {
     local action="${1:-}"
     local vault_name="${2:-}"
     [ -z "$action" ] || [ -z "$vault_name" ] && usage
-
+    
     load_config "$vault_name"
     
     case "$action" in
@@ -351,7 +351,7 @@ cmd_info() {
     local vault_name="${1:-}"
     [ -z "$vault_name" ] && usage
     load_config "$vault_name"
-
+    
     echo "Vault:             $VAULT_DIR"
     echo "Backups dir:       $BACKUPS_DIR"
     echo "Default branch:    $DEFAULT_BRANCH"
@@ -365,6 +365,7 @@ cmd_info() {
     echo "App bundle:        $(app_path "$vault_name")"
     echo "LaunchAgent label: $(plist_label "$vault_name")"
     echo "LaunchAgent plist: $(plist_path "$vault_name")"
+    echo "Shared script:     $SHARED_SCRIPT_PATH"
 }
 
 [ $# -lt 1 ] && usage
