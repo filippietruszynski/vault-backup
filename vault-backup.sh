@@ -15,6 +15,7 @@ Usage:
   $0 backup <vault-dir>           run a backup now
   $0 schedule on|off <vault-dir>  enable/disable the daily automatic backup
   $0 notify on|off <vault-dir>    enable/disable success notifications for scheduled runs
+  $0 info <vault-dir>             print the configuration and file locations for a vault
 USAGE
     exit 1
 }
@@ -60,7 +61,7 @@ log_path() {
 }
 
 app_path() {
-    echo "$HOME/Applications/VaultBackup-$(vault_name "$1").app"
+    echo "$HOME/Applications/VaultBackup/$(vault_name "$1").app"
 }
 
 plist_label() {
@@ -250,7 +251,7 @@ cmd_schedule_on() {
     }
     trap rollback ERR
     
-    mkdir -p "$HOME/Applications" "$(dirname "$log_file")"
+    mkdir -p "$(dirname "$app_path")" "$(dirname "$log_file")"
     
     echo "Creating $app_path ..."
     rm -rf "$app_path"
@@ -331,6 +332,26 @@ cmd_notify() {
     echo "Success notifications for scheduled runs: $NOTIFY_SUCCESS"
 }
 
+cmd_info() {
+    local vault_dir="${1:-}"
+    [ -z "$vault_dir" ] && usage
+    load_config "$vault_dir"
+
+    echo "Vault:             $VAULT_DIR"
+    echo "Backups dir:       $BACKUPS_DIR"
+    echo "Default branch:    $DEFAULT_BRANCH"
+    echo "Max backups:       $MAX_BUNDLES"
+    echo "Notify success:    $NOTIFY_SUCCESS"
+    echo "Schedule enabled:  $SCHEDULE_ENABLED"
+    echo "Backup time:       $BACKUP_HOUR:$BACKUP_MINUTE"
+    echo ""
+    echo "Config file:       $(config_path "$VAULT_DIR")"
+    echo "Log file:          $(log_path "$VAULT_DIR")"
+    echo "App bundle:        $(app_path "$VAULT_DIR")"
+    echo "LaunchAgent label: $(plist_label "$VAULT_DIR")"
+    echo "LaunchAgent plist: $(plist_path "$VAULT_DIR")"
+}
+
 [ $# -lt 1 ] && usage
 
 case "$1" in
@@ -338,5 +359,6 @@ case "$1" in
     backup) shift; cmd_backup "$@" ;;
     schedule) shift; cmd_schedule "$@" ;;
     notify) shift; cmd_notify "$@" ;;
+    info) shift; cmd_info "$@" ;;
     *) usage ;;
 esac
